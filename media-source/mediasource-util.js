@@ -29,7 +29,7 @@
         {
             url: 'mp4/test.mp4',
             type: 'video/mp4; codecs="mp4a.40.2, avc1.4D401E"',
-            duration: 6.0368,
+            duration: 6.0424,
             init: { offset: 0, size: 1178 },
             media: [
                 {  offset: 1246, size: 23828, timecode: 0 },
