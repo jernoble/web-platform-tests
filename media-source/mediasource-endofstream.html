@@ -23,13 +23,12 @@
             mediaSource.endOfStream();
             test.expectEvent(mediaElement, 'canplaythrough',
               'Media element may render the media content until the end');
-        });
-
-        test.waitForExpectedEvents(function()
-        {
-            assert_equals(mediaElement.readyState, HTMLMediaElement.HAVE_ENOUGH_DATA,
-              'Media element has enough data to render the content');
-            test.done();
+            test.waitForExpectedEvents(function()
+            {
+                assert_equals(mediaElement.readyState, HTMLMediaElement.HAVE_ENOUGH_DATA,
+                  'Media element has enough data to render the content');
+                test.done();
+            });
         });
     }, 'MediaSource.endOfStream(): media element notified that it now has all of the media data');
 
