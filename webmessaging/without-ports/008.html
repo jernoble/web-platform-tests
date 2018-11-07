@@ -5,8 +5,7 @@
 <div id="log"></div>
 <script>
 test(function() {
-  assert_throws('NOT_SUPPORTED_ERR', function() {
-    postMessage('');
-  });
-});
-</script>
+  postMessage('');
+  this.done();
+ });
+ </script>

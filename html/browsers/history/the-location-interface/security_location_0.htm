@@ -3,7 +3,7 @@
   <head>
     <title>Location interface Security</title>
     <link rel="author" title="Microsoft" href="http://www.microsoft.com/" />
-    <link rel="help" href="http://www.w3.org/TR/html5/browsers.html#security-location" />
+    <link rel="help" href="https://html.spec.whatwg.org/multipage/#security-location" />
     <meta name="assert" content="access location object from different origins doesn't raise SECURITY_ERR exception" />
     <script src="/resources/testharness.js"></script>
     <script src="/resources/testharnessreport.js"></script>
@@ -11,13 +11,17 @@
   <body>
     <p>Access location object from different origins doesn't raise SECURITY_ERR exception</p>
     <div id=log></div>
-    <script type="text/javascript">
+    <script src="/common/get-host-info.sub.js"></script>
+    <script>
       var runTest = async_test("Accessing location object from different origins doesn't raise SECURITY_ERR exception").step_func_done(function() {
         var frame = document.getElementById('testframe');
         frame.setAttribute('onload', '');
-        frame.contentWindow.location = 'http://dev.w3.org/';
+        frame.contentWindow.location = get_host_info().HTTP_REMOTE_ORIGIN + "/";
       });
     </script>
-    <iframe id='testframe' src="http://www.w3.org/" onload="runTest()">Test Frame</iframe>
+    <iframe id='testframe' onload="runTest()">Test Frame</iframe>
+    <script>
+      document.getElementById('testframe').setAttribute('src', get_host_info().HTTP_REMOTE_ORIGIN + '/');
+    </script>
   </body>
 </html>

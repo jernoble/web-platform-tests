@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <title>HTML Test: marquee-scrolldelay</title>
 <link rel="author" title="Intel" href="http://www.intel.com/">
-<link rel="help" href="http://www.whatwg.org/specs/web-apps/current-work/multipage/obsolete.html#the-marquee-element">
+<link rel="help" href="https://html.spec.whatwg.org/multipage/multipage/obsolete.html#the-marquee-element">
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
 <div id="log"></div>
@@ -23,7 +23,9 @@
 
   test(function() {
     var mq = document.getElementById("test3");
-    assert_equals(mq.scrollDelay, 60, "The delay time should be 60ms.");
+    assert_equals(mq.scrollDelay, 1,
+                  "The delay time should be 1ms (although this doesn't " +
+                  "match rendering).");
   }, "The scrolldelay attribute is less than 60");
 
   test(function() {

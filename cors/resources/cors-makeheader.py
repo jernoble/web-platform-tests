@@ -5,12 +5,12 @@ def main(request, response):
 
     if "check" in request.GET:
         token = request.GET.first("token")
-        try:
-            value = request.server.stash.take(token)
+        value = request.server.stash.take(token)
+        if value is not None:
             if request.GET.first("check", None) == "keep":
                 request.server.stash.put(token, value)
             body = "1"
-        except KeyError:
+        else:
             body = "0"
         return [("Content-Type", "text/plain")], body
 
@@ -28,7 +28,11 @@ def main(request, response):
     if 'methods' in request.GET:
         response.headers.set("Access-Control-Allow-Methods", request.GET.first('methods'))
 
-    code = request.GET.first('code', None)
+    code_raw = request.GET.first('code', None)
+    if code_raw:
+        code = int(code_raw)
+    else:
+        code = None
     if request.method == 'OPTIONS':
         #Override the response code if we're in a preflight and it's asked
         if 'preflight' in request.GET:
@@ -36,7 +40,7 @@ def main(request, response):
 
         #Log that the preflight actually happened if we have an ident
         if 'token' in request.GET:
-            request.server.stash.put(request.GET['token'])
+            request.server.stash.put(request.GET['token'], True)
 
     if 'location' in request.GET:
         if code is None:
@@ -61,4 +65,3 @@ def main(request, response):
         return (code, "StatusText"), [], body
     else:
         return body
-

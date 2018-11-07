@@ -1,13 +1,19 @@
 <!doctype html>
 <meta charset=utf-8>
 <title>DOMImplementation.hasFeature(feature, version)</title>
-<link rel=help href="http://dvcs.w3.org/hg/domcore/raw-file/tip/Overview.html#dom-domimplementation-hasfeature">
+<link rel=help href="https://dom.spec.whatwg.org/#dom-domimplementation-hasfeature">
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
 <div id="log"></div>
 <script>
 test(function() {
   var tests = [
+        [],
+        ["Core"],
+        ["XML"],
+        ["org.w3c.svg"],
+        ["org.w3c.dom.svg"],
+        ["http://www.w3.org/TR/SVG11/feature#Script"],
         ["Core", "1.0"],
         ["Core", "2.0"],
         ["Core", "3.0"],
@@ -131,11 +137,19 @@ test(function() {
         ["This is filler text.", ""],
         [null, ""],
         [undefined, ""],
+        ["org.w3c.svg", ""],
+        ["org.w3c.svg", "1.0"],
+        ["org.w3c.svg", "1.1"],
+        ["org.w3c.dom.svg", ""],
+        ["org.w3c.dom.svg", "1.0"],
+        ["org.w3c.dom.svg", "1.1"],
+        ["http://www.w3.org/TR/SVG11/feature#Script", "7.5"],
       ];
   tests.forEach(function(data) {
     test(function() {
-      assert_equals(document.implementation.hasFeature(data[0], data[1]), true)
-    }, "hasFeature(" + format_value(data[0]) + ", " + format_value(data[1]) + ")")
+      assert_equals(document.implementation.hasFeature
+                    .apply(document.implementation, data), true)
+    }, "hasFeature(" + data.map(format_value).join(", ") + ")")
   })
 })
 </script>

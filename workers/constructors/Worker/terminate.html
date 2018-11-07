@@ -1,6 +1,8 @@
 <!--
-while (true)
+(function f() {
   postMessage(1);
+  setTimeout(f, 0);
+})();
 /*
 -->
 <!doctype html>
@@ -8,23 +10,33 @@ while (true)
 <link rel=help href="http://www.whatwg.org/html/#dom-worker-terminate">
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="../../workers.js"></script>
 <div id="log"></div>
 <script>
 var t = async_test();
 t.step(function() {
   var worker = new Worker('#');
   var i = 0;
-  worker.onmessage = function(e) {
+  var expected;
+
+  worker.onmessage = t.step_func(function() {
     i++;
-    this.terminate();
-  }
-  setTimeout(function() {
-    t.step(function() {
-      assert_equals(i, 1);
-    });
-    t.done();
-  }, 200);
+  });
+
+  setTimeout(t.step_func(function() {
+    expected = i;
+    start_time = Date.now();
+    //Hang the main thread for a bit to give the worker the chance to post some more messages
+    while(Date.now() - start_time < 500) {
+      //pass
+    }
+    worker.terminate();
+
+    setTimeout(t.step_func(function() {
+      assert_equals(i, expected);
+      t.done();
+    }), 100);
+
+  }), 100);
 });
 </script>
 <!--

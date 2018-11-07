@@ -1,13 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!-- Submitted from TestTWF Paris -->
 <meta charset="utf-8">
 <title>Keypath</title>
 <link rel=help href="http://dvcs.w3.org/hg/IndexedDB/raw-file/tip/Overview.html#key-path-construct">
 <link rel=assert title="A key path is a DOMString that defines how to extract a key from a value. A valid key path is either the empty string, a JavaScript identifier, or multiple Javascript identifiers separated by periods (ASCII character code 46) [ECMA-262].">
-<!-- From Opera’s keypath.htm test
-
-    http://w3c-test.org/webapps/IndexedDB/tests/submissions/Opera/keypath.htm
--->
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
 <script src="support.js"></script>
@@ -45,9 +41,7 @@
                     cursor.continue();
                 }
                 else {
-                    assert_equals(actual_keys.length, expected_keys.length, "array length");
-                    assert_object_equals(actual_keys, expected_keys, "keyorder array");
-
+                    assert_key_equals(actual_keys, expected_keys, "keyorder array");
                     t.done();
                 }
             });
@@ -131,7 +125,7 @@
             "[Blob.length, Blob.type]");
     }
 
-    // File.name and File.lastModifiedDate is not testable automatically
+    // File.name and File.lastModified is not testable automatically
 
     keypath(['name', 'type'],
         [ { name: "orange", type: "fruit" }, { name: "orange", type: ["telecom", "french"] } ],

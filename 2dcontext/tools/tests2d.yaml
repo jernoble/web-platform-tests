@@ -118,6 +118,7 @@
     }
     if (ctx.setTransform) {
         @assert ctx.setTransform(1, 0, 0, 1, 0, 0) === undefined;
+        @assert ctx.setTransform() === undefined;
     }
     @assert ctx.clearRect(0, 0, 0, 0) === undefined;
     @assert ctx.fillRect(0, 0, 0, 0) === undefined;
@@ -162,7 +163,6 @@
         @assert throws TypeError ctx.transform(1, 0, 0, 1, 0);
     }
     if (ctx.setTransform) {
-        @assert throws TypeError ctx.setTransform();
         @assert throws TypeError ctx.setTransform(1);
         @assert throws TypeError ctx.setTransform(1, 0);
         @assert throws TypeError ctx.setTransform(1, 0, 0);
@@ -268,6 +268,7 @@
 - name: 2d.coordinatespace
   desc: Coordinate space goes from top-left to bottom-right
   notes: This should not be upside down.
+  manual: We can't tell that getPixelData isn't using the wrong coordinate space too.
   testing:
     - 2d.coordinatespace
   code: |
@@ -279,7 +280,6 @@
     @assert pixel 75,12 == 0,0,255,255;
     @assert pixel 25,37 == 0,0,255,255;
     @assert pixel 75,37 == 0,0,255,255;
-    @manual; // because we can't tell that getPixelData isn't using the wrong coordinate space too
   expected: |
     size 100 50
     cr.set_source_rgb(0, 0, 1)
@@ -292,12 +292,12 @@
 - name: 2d.scaled
   desc: CSS-scaled canvases get drawn correctly
   canvas: 'width="50" height="25" style="width: 100px; height: 50px"'
+  manual:
   code: |
     ctx.fillStyle = '#00f';
     ctx.fillRect(0, 0, 50, 25);
     ctx.fillStyle = '#0ff';
     ctx.fillRect(0, 0, 25, 10);
-    @manual;
   expected: |
     size 100 50
     cr.set_source_rgb(0, 0, 1)
@@ -455,11 +455,11 @@
     ctx.lineWidth = 2;
     ctx.save();
     ctx.lineWidth = 3;
-    @assert ctx.lineWidth == 3;
+    @assert ctx.lineWidth === 3;
     ctx.restore();
-    @assert ctx.lineWidth == 2;
+    @assert ctx.lineWidth === 2;
     ctx.restore();
-    @assert ctx.lineWidth == 1;
+    @assert ctx.lineWidth === 1;
 
 - name: 2d.state.saverestore.stackdepth
   desc: save()/restore() stack depth is not unreasonably limited
@@ -475,7 +475,7 @@
     }
     for (var i = limit-1; i > 0; --i)
     {
-        @assert ctx.lineWidth == i;
+        @assert ctx.lineWidth === i;
         ctx.restore();
     }
 
@@ -488,7 +488,7 @@
         ctx.restore();
     ctx.lineWidth = 0.5;
     ctx.restore();
-    @assert ctx.lineWidth == 0.5;
+    @assert ctx.lineWidth === 0.5;
 
 
 - name: 2d.transformation.order
@@ -599,7 +599,7 @@
 
     ctx.fillStyle = '#0f0';
     ctx.fillRect(-100, -10, 100, 50);
-    
+
     @assert pixel 50,25 == 0,255,0,255;
   expected: green
 
@@ -709,7 +709,7 @@
 
     ctx.fillStyle = '#0f0';
     ctx.fillRect(-100, -10, 100, 50);
-    
+
     @assert pixel 50,25 == 0,255,0,255;
   expected: green
 
@@ -740,7 +740,7 @@
 
     ctx.fillStyle = '#0f0';
     ctx.fillRect(-100, -10, 100, 50);
-    
+
     @assert pixel 50,25 == 0,255,0,255;
   expected: green
 
@@ -823,7 +823,7 @@
 
     ctx.fillStyle = '#0f0';
     ctx.fillRect(-100, -10, 100, 50);
-    
+
     @assert pixel 50,25 == 0,255,0,255;
   expected: green
 
@@ -871,6 +871,7 @@
     ctx.fillRect(0, 0, 100, 50);
 
     ctx.setTransform(1/2,0, 0,1/2, 0,0);
+    ctx.setTransform();
     ctx.setTransform(2,0, 0,2, 0,0);
     ctx.fillStyle = '#0f0';
     ctx.fillRect(0, 0, 50, 25);
@@ -890,7 +891,7 @@
 
     ctx.fillStyle = '#0f0';
     ctx.fillRect(-100, -10, 100, 50);
-    
+
     @assert pixel 50,25 == 0,255,0,255;
   expected: green
 
@@ -902,13 +903,13 @@
     ctx.globalAlpha = 0.5;
     var a = ctx.globalAlpha; // might not be exactly 0.5, if it is rounded/quantised, so remember for future comparisons
     ctx.globalAlpha = 1.1;
-    @assert ctx.globalAlpha == a;
+    @assert ctx.globalAlpha === a;
     ctx.globalAlpha = -0.1;
-    @assert ctx.globalAlpha == a;
+    @assert ctx.globalAlpha === a;
     ctx.globalAlpha = 0;
-    @assert ctx.globalAlpha == 0;
+    @assert ctx.globalAlpha === 0;
     ctx.globalAlpha = 1;
-    @assert ctx.globalAlpha == 1;
+    @assert ctx.globalAlpha === 1;
 
 - name: 2d.composite.globalAlpha.invalid
   testing:
@@ -1003,6 +1004,26 @@
     ctx.globalAlpha = 0.01; // avoid any potential alpha=0 optimisations
     ctx.fillRect(0, 0, 100, 50);
     @assert pixel 50,25 ==~ 2,253,0,255;
+  expected: green
+
+- name: 2d.composite.globalAlpha.canvascopy
+  testing:
+    - 2d.composite.globalAlpha.image
+  code: |
+    var canvas2 = document.createElement('canvas');
+    canvas2.width = 100;
+    canvas2.height = 50;
+    var ctx2 = canvas2.getContext('2d');
+    ctx2.fillStyle = '#0f0';
+    ctx2.fillRect(0, 0, 100, 50);
+
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(0, 0, 100, 50);
+
+    ctx.globalCompositeOperation = 'copy'
+    ctx.globalAlpha = 0.51;
+    ctx.drawImage(canvas2, 0, 0);
+    @assert pixel 50,25 ==~ 0,255,0,130;
   expected: green
 
 
@@ -1254,7 +1275,7 @@
     for (var i = 0; i < modes.length; ++i)
     {
         ctx.globalCompositeOperation = modes[i];
-        @assert ctx.globalCompositeOperation == modes[i];
+        @assert ctx.globalCompositeOperation === modes[i];
     }
 
 - name: 2d.composite.operation.unrecognised
@@ -1263,7 +1284,7 @@
   code: |
     ctx.globalCompositeOperation = 'xor';
     ctx.globalCompositeOperation = 'nonexistent';
-    @assert ctx.globalCompositeOperation == 'xor';
+    @assert ctx.globalCompositeOperation === 'xor';
 
 - name: 2d.composite.operation.darker
   testing:
@@ -1271,7 +1292,7 @@
   code: |
     ctx.globalCompositeOperation = 'xor';
     ctx.globalCompositeOperation = 'darker';
-    @assert ctx.globalCompositeOperation == 'xor';
+    @assert ctx.globalCompositeOperation === 'xor';
 
 - name: 2d.composite.operation.over
   testing:
@@ -1279,7 +1300,7 @@
   code: |
     ctx.globalCompositeOperation = 'xor';
     ctx.globalCompositeOperation = 'over';
-    @assert ctx.globalCompositeOperation == 'xor';
+    @assert ctx.globalCompositeOperation === 'xor';
 
 - name: 2d.composite.operation.clear
   testing:
@@ -1287,7 +1308,7 @@
   code: |
     ctx.globalCompositeOperation = 'xor';
     ctx.globalCompositeOperation = 'clear';
-    @assert ctx.globalCompositeOperation == 'xor';
+    @assert ctx.globalCompositeOperation === 'clear';
 
 - name: 2d.composite.operation.highlight
   testing:
@@ -1295,7 +1316,7 @@
   code: |
     ctx.globalCompositeOperation = 'xor';
     ctx.globalCompositeOperation = 'highlight';
-    @assert ctx.globalCompositeOperation == 'xor';
+    @assert ctx.globalCompositeOperation === 'xor';
 
 - name: 2d.composite.operation.nullsuffix
   testing:
@@ -1303,7 +1324,7 @@
   code: |
     ctx.globalCompositeOperation = 'xor';
     ctx.globalCompositeOperation = 'source-over\0';
-    @assert ctx.globalCompositeOperation == 'xor';
+    @assert ctx.globalCompositeOperation === 'xor';
 
 - name: 2d.composite.operation.casesensitive
   testing:
@@ -1311,13 +1332,13 @@
   code: |
     ctx.globalCompositeOperation = 'xor';
     ctx.globalCompositeOperation = 'Source-over';
-    @assert ctx.globalCompositeOperation == 'xor';
+    @assert ctx.globalCompositeOperation === 'xor';
 
 - name: 2d.composite.operation.default
   testing:
     - 2d.composite.operation.default
   code: |
-    @assert ctx.globalCompositeOperation == 'source-over';
+    @assert ctx.globalCompositeOperation === 'source-over';
 
 
 - meta: |
@@ -1329,7 +1350,9 @@
     for name, string, r,g,b,a, notes in [
         ('html4', 'limE', 0,255,0,255, ""),
         ('hex3', '#0f0', 0,255,0,255, ""),
+        ('hex4', '#0f0f', 0,255,0,255, ""),
         ('hex6', '#00fF00', 0,255,0,255, ""),
+        ('hex8', '#00ff00ff', 0,255,0,255, ""),
         ('rgb-num', 'rgb(0,255,0)', 0,255,0,255, ""),
         ('rgb-clamp-1', 'rgb(-1000, 1000, -1000)', 0,255,0,255, 'Assumes colours are clamped to [0,255].'),
         ('rgb-clamp-2', 'rgb(-200%, 200%, -200%)', 0,255,0,255, 'Assumes colours are clamped to [0,255].'),
@@ -1370,6 +1393,40 @@
         ('hsla-clamp-6', 'hsla(120, 100%, 0%, -2)', 0,0,0,0, ""),
         ('svg-1', 'gray', 128,128,128,255, ""),
         ('svg-2', 'grey', 128,128,128,255, ""),
+        # css-color-4 rgb() color function
+        #   https://drafts.csswg.org/css-color/#numeric-rgb
+        ('css-color-4-rgb-1', 'rgb(0, 255.0, 0)', 0,255,0,255, ""),
+        ('css-color-4-rgb-2', 'rgb(0, 255, 0, 0.2)', 0,255,0,51, ""),
+        ('css-color-4-rgb-3', 'rgb(0, 255, 0, 20%)', 0,255,0,51, ""),
+        ('css-color-4-rgb-4', 'rgb(0 255 0)', 0,255,0,255, ""),
+        ('css-color-4-rgb-5', 'rgb(0 255 0 / 0.2)', 0,255,0,51, ""),
+        ('css-color-4-rgb-6', 'rgb(0 255 0 / 20%)', 0,255,0,51, ""),
+        ('css-color-4-rgba-1', 'rgba(0, 255.0, 0)', 0,255,0,255, ""),
+        ('css-color-4-rgba-2', 'rgba(0, 255, 0, 0.2)', 0,255,0,51, ""),
+        ('css-color-4-rgba-3', 'rgba(0, 255, 0, 20%)', 0,255,0,51, ""),
+        ('css-color-4-rgba-4', 'rgba(0 255 0)', 0,255,0,255, ""),
+        ('css-color-4-rgba-5', 'rgba(0 255 0 / 0.2)', 0,255,0,51, ""),
+        ('css-color-4-rgba-6', 'rgba(0 255 0 / 20%)', 0,255,0,51, ""),
+        # css-color-4 hsl() color function
+        #   https://drafts.csswg.org/css-color/#the-hsl-notation
+        ('css-color-4-hsl-1', 'hsl(120 100.0% 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsl-2', 'hsl(120 100.0% 50.0% / 0.2)', 0,255,0,51, ""),
+        ('css-color-4-hsl-3', 'hsl(120.0, 100.0%, 50.0%, 0.2)', 0,255,0,51, ""),
+        ('css-color-4-hsl-4', 'hsl(120.0, 100.0%, 50.0%, 20%)', 0,255,0,51, ""),
+        ('css-color-4-hsl-5', 'hsl(120deg, 100.0%, 50.0%, 0.2)', 0,255,0,51, ""),
+        ('css-color-4-hsl-6', 'hsl(120deg, 100.0%, 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsl-7', 'hsl(133.33333333grad, 100.0%, 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsl-8', 'hsl(2.0943951024rad, 100.0%, 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsl-9', 'hsl(0.3333333333turn, 100.0%, 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsla-1', 'hsl(120 100.0% 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsla-2', 'hsl(120 100.0% 50.0% / 0.2)', 0,255,0,51, ""),
+        ('css-color-4-hsla-3', 'hsl(120.0, 100.0%, 50.0%, 0.2)', 0,255,0,51, ""),
+        ('css-color-4-hsla-4', 'hsl(120.0, 100.0%, 50.0%, 20%)', 0,255,0,51, ""),
+        ('css-color-4-hsla-5', 'hsl(120deg, 100.0%, 50.0%, 0.2)', 0,255,0,51, ""),
+        ('css-color-4-hsla-6', 'hsl(120deg, 100.0%, 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsla-7', 'hsl(133.33333333grad, 100.0%, 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsla-8', 'hsl(2.0943951024rad, 100.0%, 50.0%)', 0,255,0,255, ""),
+        ('css-color-4-hsla-9', 'hsl(0.3333333333turn, 100.0%, 50.0%)', 0,255,0,255, ""),
         # currentColor is handled later
     ]:
         # TODO: test by retrieving fillStyle, instead of actually drawing?
@@ -1397,38 +1454,52 @@
         ('hex1', '#f'),
         ('hex2', '#f0'),
         ('hex3', '#g00'),
-        ('hex4', '#ff00'),
+        ('hex4', '#fg00'),
         ('hex5', '#ff000'),
         ('hex6', '#fg0000'),
         ('hex7', '#ff0000f'),
-        ('hex8', '#ff0000ff'),
-        ('rgb-1', 'rgb(255.0, 0, 0)'),
-        ('rgb-2', 'rgb(255, 0.0, 0)'),
-        ('rgb-3', 'rgb(255.0, 0, 0,)'),
-        ('rgb-4', 'rgb(100%, 0, 0)'),
-        ('rgb-5', 'rgb(255 0 0)'),
-        ('rgb-6', 'rgb(255, - 1, 0)'),
-        ('rgb-7', 'rgb(255, 0, 0, 1)'),
-        ('rgba-1', 'rgba(255, 0, 0)'),
-        ('rgba-2', 'rgba(255.0, 0, 0, 1)'),
-        ('rgba-3', 'rgba(100%, 0, 0, 1)'),
-        ('rgba-4', 'rgba(255, 0, 0, 100%)'),
-        ('rgba-5', 'rgba(255, 0, 0, 1. 0)'),
-        ('rgba-6', 'rgba(255, 0, 0, 1.)'),
-        ('rgba-7', 'rgba(255, 0, 0, '),
+        ('hex8', '#fg0000ff'),
+        ('rgb-1', 'rgb(255.0, 0, 0,)'),
+        ('rgb-2', 'rgb(100%, 0, 0)'),
+        ('rgb-3', 'rgb(255, - 1, 0)'),
+        ('rgba-1', 'rgba(100%, 0, 0, 1)'),
+        ('rgba-2', 'rgba(255, 0, 0, 1. 0)'),
+        ('rgba-3', 'rgba(255, 0, 0, 1.)'),
+        ('rgba-4', 'rgba(255, 0, 0, '),
+        ('rgba-5', 'rgba(255, 0, 0, 1,)'),
         ('hsl-1', 'hsl(0%, 100%, 50%)'),
         ('hsl-2', 'hsl(z, 100%, 50%)'),
         ('hsl-3', 'hsl(0, 0, 50%)'),
         ('hsl-4', 'hsl(0, 100%, 0)'),
-        ('hsl-5', 'hsl(0, 100%, 100%, 1)'),
-        ('hsl-6', 'hsl(0, 100.%, 50%)'),
+        ('hsl-5', 'hsl(0, 100.%, 50%)'),
+        ('hsl-6', 'hsl(0, 100%, 50%,)'),
         ('hsla-1', 'hsla(0%, 100%, 50%, 1)'),
         ('hsla-2', 'hsla(0, 0, 50%, 1)'),
+        ('hsla-3', 'hsla(0, 0, 50%, 1,)'),
         ('name-1', 'darkbrown'),
         ('name-2', 'firebrick1'),
         ('name-3', 'red blue'),
         ('name-4', '"red"'),
         ('name-5', '"red'),
+        # css-color-4 color function
+        #   comma and comma-less expressions should not mix together.
+        ('css-color-4-rgb-1', 'rgb(255, 0, 0 / 1)'),
+        ('css-color-4-rgb-2', 'rgb(255 0 0, 1)'),
+        ('css-color-4-rgb-3', 'rgb(255, 0 0)'),
+        ('css-color-4-rgba-1', 'rgba(255, 0, 0 / 1)'),
+        ('css-color-4-rgba-2', 'rgba(255 0 0, 1)'),
+        ('css-color-4-rgba-3', 'rgba(255, 0 0)'),
+        ('css-color-4-hsl-1', 'hsl(0, 100%, 50% / 1)'),
+        ('css-color-4-hsl-2', 'hsl(0 100% 50%, 1)'),
+        ('css-color-4-hsl-3', 'hsl(0, 100% 50%)'),
+        ('css-color-4-hsla-1', 'hsla(0, 100%, 50% / 1)'),
+        ('css-color-4-hsla-2', 'hsla(0 100% 50%, 1)'),
+        ('css-color-4-hsla-3', 'hsla(0, 100% 50%)'),
+        #  trailing slash
+        ('css-color-4-rgb-4', 'rgb(0 0 0 /)'),
+        ('css-color-4-rgb-5', 'rgb(0, 0, 0 /)'),
+        ('css-color-4-hsl-4', 'hsl(0 100% 50% /)'),
+        ('css-color-4-hsl-5', 'hsl(0, 100%, 50% /)'),
     ]:
         test = {
             'name': '2d.fillStyle.parse.invalid.%s' % name,
@@ -1561,19 +1632,19 @@
     - 2d.serializecolour.transparent
   code: |
     ctx.fillStyle = 'rgba(0,0,0,0)';
-    @assert ctx.fillStyle == 'rgba(0, 0, 0, 0)';
+    @assert ctx.fillStyle === 'rgba(0, 0, 0, 0)';
 
 - name: 2d.fillStyle.default
   testing:
     - 2d.colours.default
   code: |
-    @assert ctx.fillStyle == '#000000';
+    @assert ctx.fillStyle === '#000000';
 
 - name: 2d.strokeStyle.default
   testing:
     - 2d.colours.default
   code: |
-    @assert ctx.strokeStyle == '#000000';
+    @assert ctx.strokeStyle === '#000000';
 
 
 - name: 2d.gradient.object.type
@@ -1666,9 +1737,9 @@
     g.addColorStop(1, 'rgba(0,0,255, 1)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 100, 50);
-    @assert pixel 25,25 ==~ 191,191,63,63 +/- 3;
-    @assert pixel 50,25 ==~ 127,127,127,127 +/- 3;
-    @assert pixel 75,25 ==~ 63,63,191,191 +/- 3;
+    @assert pixel 25,25 ==~ 190,190,65,65 +/- 3;
+    @assert pixel 50,25 ==~ 126,126,128,128 +/- 3;
+    @assert pixel 75,25 ==~ 62,62,192,192 +/- 3;
   expected: |
     size 100 50
     g = cairo.LinearGradient(0, 0, 100, 0)
@@ -2011,9 +2082,9 @@
     var g = ctx.createLinearGradient(0, 0, 100, 0);
     @assert throws INDEX_SIZE_ERR g.addColorStop(-1, '#000');
     @assert throws INDEX_SIZE_ERR g.addColorStop(2, '#000');
-    @assert throws INDEX_SIZE_ERR g.addColorStop(Infinity, '#000');
-    @assert throws INDEX_SIZE_ERR g.addColorStop(-Infinity, '#000');
-    @assert throws INDEX_SIZE_ERR g.addColorStop(NaN, '#000');
+    @assert throws TypeError g.addColorStop(Infinity, '#000');
+    @assert throws TypeError g.addColorStop(-Infinity, '#000');
+    @assert throws TypeError g.addColorStop(NaN, '#000');
 
 - name: 2d.gradient.object.invalidcolour
   testing:
@@ -2021,6 +2092,15 @@
   code: |
     var g = ctx.createLinearGradient(0, 0, 100, 0);
     @assert throws SYNTAX_ERR g.addColorStop(0, "");
+    @assert throws SYNTAX_ERR g.addColorStop(0, 'rgb(NaN%, NaN%, NaN%)');
+    @assert throws SYNTAX_ERR g.addColorStop(0, 'null');
+    @assert throws SYNTAX_ERR g.addColorStop(0, 'undefined');
+    @assert throws SYNTAX_ERR g.addColorStop(0, null);
+    @assert throws SYNTAX_ERR g.addColorStop(0, undefined);
+
+    var g = ctx.createRadialGradient(0, 0, 0, 100, 0, 0);
+    @assert throws SYNTAX_ERR g.addColorStop(0, "");
+    @assert throws SYNTAX_ERR g.addColorStop(0, 'rgb(NaN%, NaN%, NaN%)');
     @assert throws SYNTAX_ERR g.addColorStop(0, 'null');
     @assert throws SYNTAX_ERR g.addColorStop(0, 'undefined');
     @assert throws SYNTAX_ERR g.addColorStop(0, null);
@@ -2819,7 +2899,7 @@
     - broken.png
   code: |
     var img = document.getElementById('broken.png');
-    @assert ctx.createPattern(img, 'repeat') === null; @moz-todo
+    @assert throws INVALID_STATE_ERR ctx.createPattern(img, 'repeat');
 
 - name: 2d.pattern.repeat.empty
   testing:
@@ -2844,7 +2924,7 @@
   testing:
     - 2d.pattern.unrecognised
   code: |
-    @assert throws SYNTAX_ERR ctx.createPattern(canvas, null); @moz-todo
+    @assert ctx.createPattern(canvas, null) != null;
 
 - name: 2d.pattern.repeat.undefined
   testing:
@@ -2857,6 +2937,12 @@
     - 2d.pattern.unrecognised
   code: |
     @assert throws SYNTAX_ERR ctx.createPattern(canvas, "invalid");
+
+- name: 2d.pattern.repeat.unrecognisednull
+  testing:
+    - 2d.pattern.unrecognised
+  code: |
+    @assert throws SYNTAX_ERR ctx.createPattern(canvas, "null");
 
 - name: 2d.pattern.repeat.case
   testing:
@@ -2879,7 +2965,7 @@
     var img = document.getElementById('green.png');
     var pattern = ctx.createPattern(img, 'no-repeat');
     deferTest();
-    img.onload = wrapFunction(function ()
+    img.onload = t.step_func_done(function ()
     {
         ctx.fillStyle = pattern;
         ctx.fillRect(0, 0, 100, 50);
@@ -2889,7 +2975,7 @@
         @assert pixel 1,48 == 0,255,0,255;
         @assert pixel 98,48 == 0,255,0,255;
     });
-    img.src = '../images/red.png';
+    img.src = '/images/red.png';
   expected: green
 
 - name: 2d.pattern.modify.image2
@@ -2905,7 +2991,7 @@
     ctx.fillStyle = '#00f';
     ctx.fillRect(0, 0, 100, 50);
     deferTest();
-    img.onload = wrapFunction(function ()
+    img.onload = t.step_func_done(function ()
     {
         ctx.fillStyle = pattern;
         ctx.fillRect(0, 0, 100, 50);
@@ -2915,7 +3001,7 @@
         @assert pixel 1,48 == 0,255,0,255;
         @assert pixel 98,48 == 0,255,0,255;
     });
-    img.src = '../images/red.png';
+    img.src = '/images/red.png';
   expected: green
 
 - name: 2d.pattern.modify.canvas1
@@ -2995,7 +3081,7 @@
   code: |
     ctx.fillStyle = '#f00';
     ctx.fillRect(0, 0, 100, 50);
-    
+
     var img = document.getElementById('green.png');
     var pattern = ctx.createPattern(img, 'no-repeat');
     ctx.fillStyle = pattern;
@@ -3354,7 +3440,7 @@
   code: |
     ctx.fillStyle = '#f00';
     ctx.fillRect(0, 0, 100, 50);
-    
+
     var img = document.getElementById('rrgg-256x256.png');
     var pattern = ctx.createPattern(img, 'no-repeat');
     ctx.fillStyle = pattern;
@@ -3379,7 +3465,7 @@
   code: |
     ctx.fillStyle = '#f00';
     ctx.fillRect(0, 0, 100, 50);
-    
+
     var canvas2 = document.createElement('canvas');
     canvas2.width = 100;
     canvas2.height = 50;
@@ -3410,11 +3496,11 @@
     - anim-gr.gif
   code: |
     deferTest();
-    setTimeout(function () {
+    step_timeout(function () {
         var pattern = ctx.createPattern(document.getElementById('anim-gr.gif'), 'repeat');
         ctx.fillStyle = pattern;
         ctx.fillRect(0, 0, 50, 50);
-        setTimeout(wrapFunction(function () {
+        step_timeout(t.step_func_done(function () {
             ctx.fillRect(50, 0, 50, 50);
             @assert pixel 25,25 ==~ 0,255,0,255;
             @assert pixel 75,25 ==~ 0,255,0,255;
@@ -4405,7 +4491,7 @@
     - 2d.shadow.blur.initial
   code: |
     @assert ctx.shadowBlur === 0;
-    
+
 - name: 2d.shadow.attributes.shadowBlur.valid
   testing:
     - 2d.shadow.blur.get
@@ -4416,13 +4502,13 @@
 
     ctx.shadowBlur = 0.5;
     @assert ctx.shadowBlur === 0.5;
-    
+
     ctx.shadowBlur = 1e6;
     @assert ctx.shadowBlur === 1e6;
-    
+
     ctx.shadowBlur = 0;
     @assert ctx.shadowBlur === 0;
-    
+
 - name: 2d.shadow.attributes.shadowBlur.invalid
   testing:
     - 2d.shadow.blur.invalid
@@ -4434,11 +4520,11 @@
     ctx.shadowBlur = 1;
     ctx.shadowBlur = Infinity;
     @assert ctx.shadowBlur === 1;
-    
+
     ctx.shadowBlur = 1;
     ctx.shadowBlur = -Infinity;
     @assert ctx.shadowBlur === 1;
-    
+
     ctx.shadowBlur = 1;
     ctx.shadowBlur = NaN;
     @assert ctx.shadowBlur === 1;
@@ -4464,12 +4550,12 @@
     ctx.shadowOffsetY = 0.25;
     @assert ctx.shadowOffsetX === 0.5;
     @assert ctx.shadowOffsetY === 0.25;
-    
+
     ctx.shadowOffsetX = -0.5;
     ctx.shadowOffsetY = -0.25;
     @assert ctx.shadowOffsetX === -0.5;
     @assert ctx.shadowOffsetY === -0.25;
-    
+
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
     @assert ctx.shadowOffsetX === 0;
@@ -4529,11 +4615,11 @@
     ctx.shadowColor = '#00ff00';
     ctx.shadowColor = 'bogus';
     @assert ctx.shadowColor === '#00ff00';
-    
+
     ctx.shadowColor = '#00ff00';
     ctx.shadowColor = 'red bogus';
     @assert ctx.shadowColor === '#00ff00';
-    
+
     ctx.shadowColor = '#00ff00';
     ctx.shadowColor = ctx;
     @assert ctx.shadowColor === '#00ff00';
@@ -5310,6 +5396,7 @@
 
 - name: 2d.shadow.blur.low
   desc: Shadows look correct for small blurs
+  manual:
   testing:
     - 2d.shadow.render
   code: |
@@ -5326,7 +5413,6 @@
         ctx.fillRect(-200, -200, 500, 200);
         ctx.restore();
     }
-    @manual;
   expected: |
     size 100 50
     import math
@@ -5349,6 +5435,7 @@
 
 - name: 2d.shadow.blur.high
   desc: Shadows look correct for large blurs
+  manual:
   testing:
     - 2d.shadow.render
   code: |
@@ -5358,7 +5445,6 @@
     ctx.shadowOffsetY = 0;
     ctx.shadowBlur = 100;
     ctx.fillRect(-200, -200, 200, 400);
-    @manual;
   expected: |
     size 100 50
     import math
@@ -6189,6 +6275,18 @@
     @assert pixel 90,45 == 0,255,0,255;
   expected: green
 
+- name: 2d.path.lineTo.nonfinite.details
+  desc: lineTo() with Infinity/NaN for first arg still converts the second arg
+  testing:
+    - 2d.nonfinite
+  code: |
+    for (var arg1 of [Infinity, -Infinity, NaN]) {
+      var converted = false;
+      ctx.lineTo(arg1, { valueOf: function() { converted = true; return 0; } });
+      @assert converted;
+    }
+  expected: clear
+
 - name: 2d.path.quadraticCurveTo.ensuresubpath.1
   desc: If there is no subpath, the first control point is added (and nothing is drawn up to it)
   testing:
@@ -6811,7 +6909,7 @@
     ctx.stroke();
     @assert pixel 50,25 == 0,255,0,255;
   expected: green
-  
+
 - name: 2d.path.arc.nonempty
   desc: arc() with a non-empty path does draw a straight line to the start point
   testing:
@@ -8039,7 +8137,7 @@
     ctx.fillStyle = '#0f0';
     ctx.fillRect(0, 0, 100, 50);
 
-    ctx.fillStyle = '#f00';    
+    ctx.fillStyle = '#f00';
     ctx.translate(-100, 0);
     ctx.rect(0, 0, 100, 50);
     ctx.fill();
@@ -8353,26 +8451,26 @@
   code: |
     ctx.moveTo(25, 25);
     ctx.bezierCurveTo(50, -50, 50, 100, 75, 25);
-    @assert ctx.isPointInPath(25, 20) == false;
-    @assert ctx.isPointInPath(25, 30) == false;
-    @assert ctx.isPointInPath(30, 20) == true;
-    @assert ctx.isPointInPath(30, 30) == false;
-    @assert ctx.isPointInPath(40, 2) == false;
-    @assert ctx.isPointInPath(40, 20) == true;
-    @assert ctx.isPointInPath(40, 30) == false;
-    @assert ctx.isPointInPath(40, 47) == false;
-    @assert ctx.isPointInPath(45, 20) == true;
-    @assert ctx.isPointInPath(45, 30) == false;
-    @assert ctx.isPointInPath(55, 20) == false;
-    @assert ctx.isPointInPath(55, 30) == true;
-    @assert ctx.isPointInPath(60, 2) == false;
-    @assert ctx.isPointInPath(60, 20) == false;
-    @assert ctx.isPointInPath(60, 30) == true;
-    @assert ctx.isPointInPath(60, 47) == false;
-    @assert ctx.isPointInPath(70, 20) == false;
-    @assert ctx.isPointInPath(70, 30) == true;
-    @assert ctx.isPointInPath(75, 20) == false;
-    @assert ctx.isPointInPath(75, 30) == false;
+    @assert ctx.isPointInPath(25, 20) === false;
+    @assert ctx.isPointInPath(25, 30) === false;
+    @assert ctx.isPointInPath(30, 20) === true;
+    @assert ctx.isPointInPath(30, 30) === false;
+    @assert ctx.isPointInPath(40, 2) === false;
+    @assert ctx.isPointInPath(40, 20) === true;
+    @assert ctx.isPointInPath(40, 30) === false;
+    @assert ctx.isPointInPath(40, 47) === false;
+    @assert ctx.isPointInPath(45, 20) === true;
+    @assert ctx.isPointInPath(45, 30) === false;
+    @assert ctx.isPointInPath(55, 20) === false;
+    @assert ctx.isPointInPath(55, 30) === true;
+    @assert ctx.isPointInPath(60, 2) === false;
+    @assert ctx.isPointInPath(60, 20) === false;
+    @assert ctx.isPointInPath(60, 30) === true;
+    @assert ctx.isPointInPath(60, 47) === false;
+    @assert ctx.isPointInPath(70, 20) === false;
+    @assert ctx.isPointInPath(70, 30) === true;
+    @assert ctx.isPointInPath(75, 20) === false;
+    @assert ctx.isPointInPath(75, 30) === false;
 
 - name: 2d.path.isPointInPath.winding
   desc: isPointInPath() uses the non-zero winding number rule
@@ -8684,7 +8782,7 @@
   expected: green
 
 - name: 2d.drawImage.zerosource
-  desc: drawImage with zero-sized source rectangle throws INDEX_SIZE_ERR
+  desc: drawImage with zero-sized source rectangle draws nothing without exception
   testing:
     - 2d.drawImage.zerosource
   images:
@@ -8692,9 +8790,9 @@
   code: |
     ctx.fillStyle = '#0f0';
     ctx.fillRect(0, 0, 100, 50);
-    @assert throws INDEX_SIZE_ERR ctx.drawImage(document.getElementById('red.png'), 10, 10, 0, 1, 0, 0, 100, 50);
-    @assert throws INDEX_SIZE_ERR ctx.drawImage(document.getElementById('red.png'), 10, 10, 1, 0, 0, 0, 100, 50);
-    @assert throws INDEX_SIZE_ERR ctx.drawImage(document.getElementById('red.png'), 10, 10, 0, 0, 0, 0, 100, 50);
+    ctx.drawImage(document.getElementById('red.png'), 10, 10, 0, 1, 0, 0, 100, 50);
+    ctx.drawImage(document.getElementById('red.png'), 10, 10, 1, 0, 0, 0, 100, 50);
+    ctx.drawImage(document.getElementById('red.png'), 10, 10, 0, 0, 0, 0, 100, 50);
     @assert pixel 50,25 ==~ 0,255,0,255;
   expected: green
 
@@ -8904,18 +9002,16 @@
   expected: green
 
 - name: 2d.drawImage.zerocanvas
+  desc: drawImage with zero-sized canvas as the source shoud throw exception
   testing:
     - 2d.drawImage.zerocanvas
   code: |
-    ctx.fillStyle = '#0f0';
-    ctx.fillRect(0, 0, 100, 50);
-
     var canvas2 = document.createElement('canvas');
     canvas2.width = 0;
-    canvas2.height = 10;
+    canvas2.height = 50;
     @assert throws INVALID_STATE_ERR ctx.drawImage(canvas2, 0, 0);
 
-    canvas2.width = 10;
+    canvas2.width = 50;
     canvas2.height = 0;
     @assert throws INVALID_STATE_ERR ctx.drawImage(canvas2, 0, 0);
 
@@ -8923,6 +9019,14 @@
     canvas2.height = 0;
     @assert throws INVALID_STATE_ERR ctx.drawImage(canvas2, 0, 0);
 
+- name: 2d.drawImage.svg
+  desc: drawImage() of an SVG image
+  testing:
+    - 2d.drawImage.svg
+  images:
+    - green.svg
+  code: |
+    ctx.drawImage(document.getElementById('green.svg'), 0, 0);
     @assert pixel 50,25 ==~ 0,255,0,255;
   expected: green
 
@@ -8934,7 +9038,7 @@
     - anim-gr.gif
   code: |
     deferTest();
-    setTimeout(wrapFunction(function () {
+    step_timeout(t.step_func_done(function () {
         ctx.drawImage(document.getElementById('anim-gr.gif'), 0, 0);
         @assert pixel 50,25 ==~ 0,255,0,255;
     }), 500);
@@ -8948,7 +9052,7 @@
     - anim-gr.png
   code: |
     deferTest();
-    setTimeout(wrapFunction(function () {
+    step_timeout(t.step_func_done(function () {
         ctx.drawImage(document.getElementById('anim-gr.png'), 0, 0);
         @assert pixel 50,25 ==~ 0,255,0,255;
     }), 500);
@@ -9133,7 +9237,7 @@
     - 2d.imageData.initial
   code: |
     var imgdata = ctx.createImageData(10, 20);
-    @assert imgdata.data.length == imgdata.width*imgdata.height*4;
+    @assert imgdata.data.length === imgdata.width*imgdata.height*4;
     @assert imgdata.width < imgdata.height;
     @assert imgdata.width > 0;
     var isTransparentBlack = true;
@@ -9153,9 +9257,9 @@
     ctx.fillRect(0, 0, 100, 50);
     var imgdata1 = ctx.getImageData(0, 0, 10, 20);
     var imgdata2 = ctx.createImageData(imgdata1);
-    @assert imgdata2.data.length == imgdata1.data.length;
-    @assert imgdata2.width == imgdata1.width;
-    @assert imgdata2.height == imgdata1.height;
+    @assert imgdata2.data.length === imgdata1.data.length;
+    @assert imgdata2.width === imgdata1.width;
+    @assert imgdata2.height === imgdata1.height;
     var isTransparentBlack = true;
     for (var i = 0; i < imgdata2.data.length; ++i)
         if (imgdata2.data[i] !== 0)
@@ -9168,27 +9272,11 @@
     - 2d.imageData.create2.size
   code: |
     var imgdata = ctx.createImageData(1000, 2000);
-    @assert imgdata.data.length == imgdata.width*imgdata.height*4;
+    @assert imgdata.data.length === imgdata.width*imgdata.height*4;
     @assert imgdata.width < imgdata.height;
     @assert imgdata.width > 0;
     var isTransparentBlack = true;
     for (var i = 0; i < imgdata.data.length; i += 7813) // check ~1024 points (assuming normal scaling)
-        if (imgdata.data[i] !== 0)
-            isTransparentBlack = false;
-    @assert isTransparentBlack;
-
-- name: 2d.imageData.create2.tiny
-  desc: createImageData(sw, sh) works for sizes smaller than one pixel
-  testing:
-    - 2d.imageData.create2.size
-    - 2d.imageData.one
-  code: |
-    var imgdata = ctx.createImageData(0.0001, 0.0001);
-    @assert imgdata.data.length == imgdata.width*imgdata.height*4;
-    @assert imgdata.width == 1;
-    @assert imgdata.height == 1;
-    var isTransparentBlack = true;
-    for (var i = 0; i < imgdata.data.length; ++i)
         if (imgdata.data[i] !== 0)
             isTransparentBlack = false;
     @assert isTransparentBlack;
@@ -9202,9 +9290,9 @@
     var imgdata2 = ctx.createImageData(-10, 20);
     var imgdata3 = ctx.createImageData(10, -20);
     var imgdata4 = ctx.createImageData(-10, -20);
-    @assert imgdata1.data.length == imgdata2.data.length;
-    @assert imgdata2.data.length == imgdata3.data.length;
-    @assert imgdata3.data.length == imgdata4.data.length;
+    @assert imgdata1.data.length === imgdata2.data.length;
+    @assert imgdata2.data.length === imgdata3.data.length;
+    @assert imgdata3.data.length === imgdata4.data.length;
 
 - name: 2d.imageData.create2.zero
   desc: createImageData(sw, sh) throws INDEX_SIZE_ERR if size is zero
@@ -9214,6 +9302,8 @@
     @assert throws INDEX_SIZE_ERR ctx.createImageData(10, 0);
     @assert throws INDEX_SIZE_ERR ctx.createImageData(0, 10);
     @assert throws INDEX_SIZE_ERR ctx.createImageData(0, 0);
+    @assert throws INDEX_SIZE_ERR ctx.createImageData(0.99, 10);
+    @assert throws INDEX_SIZE_ERR ctx.createImageData(10, 0.1);
 
 - name: 2d.imageData.create2.nonfinite
   desc: createImageData() throws TypeError if arguments are not finite
@@ -9234,15 +9324,17 @@
   code: |
     @assert throws TypeError ctx.createImageData(null);
 
-- name: 2d.imageData.create2.round
-  desc: createImageData(w, h) is rounded the same as getImageData(0, 0, w, h)
+- name: 2d.imageData.create2.double
+  desc: createImageData(w, h) double is converted to long
   testing:
-    - 2d.imageData.createround
+    - 2d.imageData.create2.size
   code: |
     var imgdata1 = ctx.createImageData(10.01, 10.99);
-    var imgdata2 = ctx.getImageData(0, 0, 10.01, 10.99);
-    @assert imgdata1.width == imgdata2.width;
-    @assert imgdata1.height == imgdata2.height;
+    var imgdata2 = ctx.createImageData(-10.01, -10.99);
+    @assert imgdata1.width === 10;
+    @assert imgdata1.height === 10;
+    @assert imgdata2.width === 10;
+    @assert imgdata2.height === 10;
 
 - name: 2d.imageData.get.basic
   desc: getImageData() exists and returns something
@@ -9272,6 +9364,10 @@
     @assert throws INDEX_SIZE_ERR ctx.getImageData(1, 1, 10, 0);
     @assert throws INDEX_SIZE_ERR ctx.getImageData(1, 1, 0, 10);
     @assert throws INDEX_SIZE_ERR ctx.getImageData(1, 1, 0, 0);
+    @assert throws INDEX_SIZE_ERR ctx.getImageData(1, 1, 0.1, 10);
+    @assert throws INDEX_SIZE_ERR ctx.getImageData(1, 1, 10, 0.99);
+    @assert throws INDEX_SIZE_ERR ctx.getImageData(1, 1, -0.1, 10);
+    @assert throws INDEX_SIZE_ERR ctx.getImageData(1, 1, 10, -0.99);
 
 - name: 2d.imageData.get.nonfinite
   desc: getImageData() throws TypeError if arguments are not finite
@@ -9293,7 +9389,7 @@
   code: |
     ctx.fillStyle = '#08f';
     ctx.fillRect(0, 0, 100, 50);
-   
+
     var imgdata1 = ctx.getImageData(-10, 5, 1, 1);
     @assert imgdata1.data[0] === 0;
     @assert imgdata1.data[1] === 0;
@@ -9362,7 +9458,7 @@
     ctx.fillRect(0, 0, 100, 50);
     ctx.fillStyle = '#fff';
     ctx.fillRect(20, 10, 60, 10);
-   
+
     var imgdata1 = ctx.getImageData(85, 25, -10, -10);
     @assert imgdata1.data[0] === 255;
     @assert imgdata1.data[1] === 255;
@@ -9389,15 +9485,17 @@
     @assert imgdata2.width > imgdata1.width;
     @assert imgdata2.height > imgdata1.height;
 
-- name: 2d.imageData.get.tiny
-  desc: getImageData() works for sizes smaller than one pixel
+- name: 2d.imageData.get.double
+  desc: createImageData(w, h) double is converted to long
   testing:
-    - 2d.imageData.one
+    - 2d.imageData.get.basic
   code: |
-    var imgdata = ctx.getImageData(0, 0, 0.0001, 0.0001);
-    @assert imgdata.data.length == imgdata.width*imgdata.height*4;
-    @assert imgdata.width == 1;
-    @assert imgdata.height == 1;
+    var imgdata1 = ctx.getImageData(0, 0, 10.01, 10.99);
+    var imgdata2 = ctx.getImageData(0, 0, -10.01, -10.99);
+    @assert imgdata1.width === 10;
+    @assert imgdata1.height === 10;
+    @assert imgdata2.width === 10;
+    @assert imgdata2.height === 10;
 
 - name: 2d.imageData.get.nonpremul
   desc: getImageData() returns non-premultiplied colours
@@ -9452,7 +9550,7 @@
     - 2d.pixelarray.length
   code: |
     var imgdata = ctx.getImageData(0, 0, 10, 10);
-    @assert imgdata.data.length == imgdata.width*imgdata.height*4;
+    @assert imgdata.data.length === imgdata.width*imgdata.height*4;
 
 - name: 2d.imageData.get.order.cols
   desc: getImageData() returns leftmost columns first
@@ -9541,9 +9639,9 @@
     - 2d.imageData.type
   code: |
     var imgdata = ctx.getImageData(0, 0, 10, 10);
-    @assert typeof(imgdata.width) == 'number';
-    @assert typeof(imgdata.height) == 'number';
-    @assert typeof(imgdata.data) == 'object';
+    @assert typeof(imgdata.width) === 'number';
+    @assert typeof(imgdata.height) === 'number';
+    @assert typeof(imgdata.data) === 'object';
 
 - name: 2d.imageData.object.readonly
   desc: ImageData objects properties are read-only
@@ -9565,13 +9663,57 @@
     @assert imgdata.data[2] === 0;
     @assert imgdata.data[3] === 0;
 
-- name: 2d.imageData.object.ctor
-  desc: ImageData does not have a usable constructor
+- name: 2d.imageData.object.ctor.size
+  desc: ImageData has a usable constructor
   testing:
     - 2d.imageData.type
   code: |
     @assert window.ImageData !== undefined;
-    @assert throws TypeError new window.ImageData(1,1);
+
+    var imgdata = new window.ImageData(2, 3);
+    @assert imgdata.width === 2;
+    @assert imgdata.height === 3;
+    @assert imgdata.data.length === 2 * 3 * 4;
+    for (var i = 0; i < imgdata.data.length; ++i) {
+      @assert imgdata.data[i] === 0;
+    }
+
+- name: 2d.imageData.object.ctor.size.bounds
+  desc: ImageData has a usable constructor
+  testing:
+    - 2d.imageData.type
+  code: |
+    @assert window.ImageData !== undefined;
+    @assert throws INDEX_SIZE_ERR new window.ImageData(0, 0);
+    @assert throws INDEX_SIZE_ERR new window.ImageData(0, 1);
+    @assert throws INDEX_SIZE_ERR new window.ImageData(1, 0);
+
+- name: 2d.imageData.object.ctor.array
+  desc: ImageData has a usable constructor
+  testing:
+    - 2d.imageData.type
+  code: |
+    @assert window.ImageData !== undefined;
+
+    var array = new Uint8ClampedArray(8);
+    var imgdata = new window.ImageData(array, 1, 2);
+    @assert imgdata.width === 1;
+    @assert imgdata.height === 2;
+    @assert imgdata.data === array;
+
+- name: 2d.imageData.object.ctor.array.bounds
+  desc: ImageData has a usable constructor
+  testing:
+    - 2d.imageData.type
+  code: |
+    @assert window.ImageData !== undefined;
+
+    @assert throws INVALID_STATE_ERR new ImageData(new Uint8ClampedArray(0), 1);
+    @assert throws INVALID_STATE_ERR new ImageData(new Uint8ClampedArray(3), 1);
+    @assert throws INDEX_SIZE_ERR new ImageData(new Uint8ClampedArray(4), 0);
+    @assert throws INDEX_SIZE_ERR new ImageData(new Uint8ClampedArray(4), 1, 2);
+    @assert throws TypeError new ImageData(new Uint8Array(8), 1, 2);
+    @assert throws TypeError new ImageData(new Int8Array(8), 1, 2);
 
 - name: 2d.imageData.object.set
   desc: ImageData.data can be modified
@@ -10012,3 +10154,78 @@
     @assert pixel 50,25 ==~ 0,255,0,255;
   expected: green
 
+- name: 2d.scrollPathIntoView.basic
+  desc: scrollPathIntoView() works
+  testing:
+    - 2d.scrollPathIntoView.basic
+  code: |
+    var div = document.createElement('div');
+    div.style.cssText = 'width: 200vw; height: 200vh';
+    document.body.appendChild(div);
+    canvas.style.cssText = 'position: absolute; top: 100px; left: 200px; border: none;';
+    window.scrollTo(0, 0);
+
+    ctx.beginPath();
+    ctx.rect(4, 8, 16, 32);
+    ctx.scrollPathIntoView();
+    var rect = canvas.getBoundingClientRect();
+    @assert Math.round(rect.top) === -8;
+    @assert Math.round(rect.left) === 200;
+
+- name: 2d.scrollPathIntoView.verticalLR
+  desc: scrollPathIntoView() works in vertical-lr writing mode
+  testing:
+    - 2d.scrollPathIntoView.basic
+  code: |
+    document.documentElement.style.cssText = 'writing-mode: vertical-lr';
+    var div = document.createElement('div');
+    div.style.cssText = 'width: 200vw; height: 200vh';
+    document.body.appendChild(div);
+    canvas.style.cssText = 'position: absolute; top: 100px; left: 200px; border: none;';
+    window.scrollTo(0, 0);
+
+    ctx.beginPath();
+    ctx.rect(4, 8, 16, 32);
+    ctx.scrollPathIntoView();
+    var rect = canvas.getBoundingClientRect();
+    @assert Math.round(rect.top) === 100;
+    @assert Math.round(rect.left) === -4;
+
+- name: 2d.scrollPathIntoView.verticalRL
+  desc: scrollPathIntoView() works in vertical-rl writing mode
+  testing:
+    - 2d.scrollPathIntoView.basic
+  code: |
+    document.documentElement.style.cssText = 'writing-mode: vertical-rl';
+    var div = document.createElement('div');
+    div.style.cssText = 'width: 200vw; height: 200vh';
+    document.body.appendChild(div);
+    canvas.style.cssText = 'position: absolute; top: 100px; right: 200px; border: none;';
+    window.scrollTo(0, 0);
+
+    ctx.beginPath();
+    ctx.rect(4, 8, 16, 32);
+    ctx.scrollPathIntoView();
+    var rect = canvas.getBoundingClientRect();
+    var viewportWidth = document.scrollingElement.clientWidth;
+    var canvasWidth = canvas.width;
+    @assert Math.round(rect.top) === 100;
+    @assert Math.round(rect.right) === viewportWidth + (canvasWidth - 4 - 16);
+
+- name: 2d.scrollPathIntoView.path
+  desc: scrollPathIntoView() with path argument works
+  testing:
+    - 2d.scrollPathIntoView.basic
+  code: |
+    var div = document.createElement('div');
+    div.style.cssText = 'width: 200vw; height: 200vh';
+    document.body.appendChild(div);
+    canvas.style.cssText = 'position: absolute; top: 100px; left: 200px; border: none;';
+    window.scrollTo(0, 0);
+
+    var path = new Path2D();
+    path.rect(4, 8, 16, 32);
+    ctx.scrollPathIntoView(path);
+    var rect = canvas.getBoundingClientRect();
+    @assert Math.round(rect.top) === -8;
+    @assert Math.round(rect.left) === 200;
